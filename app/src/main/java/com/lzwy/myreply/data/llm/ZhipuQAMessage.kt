@@ -52,6 +52,8 @@ value class FileInfo(val value: String) {
     }
 }
 
+open class LlmMessage()
+
 open class ZhipuQAMessage<T>(
     @SerializedName("role")
     var role: String?,
@@ -61,7 +63,7 @@ open class ZhipuQAMessage<T>(
     var toolsCall: String? = null,
     @SerializedName("content")
     var content: T? = null
-) {
+): LlmMessage() {
 
     fun removeImageFromContent() {
     }

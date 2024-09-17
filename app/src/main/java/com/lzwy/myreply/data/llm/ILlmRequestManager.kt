@@ -4,6 +4,7 @@ import android.net.Uri
 import kotlinx.coroutines.CoroutineScope
 
 interface ILlmRequestManager {
+    // TODO: i do really think it's weird to pass a scope so deeply//
     fun request(
         coroutineScope: CoroutineScope,
         listener: IListener?,
@@ -17,6 +18,10 @@ interface ILlmRequestManager {
         question: String?,
         imageUri: Uri,
     )
+
+    fun getHistoryList(): List<LlmMessage> {
+        return emptyList()
+    }
 
     fun requestSyncWithPrompt(listener: IListener?, model: String, prompt: String, messageList: List<Map<String, String>>)
 

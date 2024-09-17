@@ -26,12 +26,15 @@ class LlmRequestManagerImpl : ILlmRequestManager {
     private var requestId: Long = -1
     private var conversationId: String? = null
 
+
+
     override fun request(
         coroutineScope: CoroutineScope,
         listener: ILlmRequestManager.IListener?,
         question: String?,
         filePath: String?
     ) {
+        Log.i(TAG, "request question:$question")
         var fileType: Int = FILE_TYPE
         if (filePath != null) {
             val file = File(filePath)

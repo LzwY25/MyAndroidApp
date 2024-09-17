@@ -41,8 +41,8 @@ class MainActivity : ComponentActivity() {
                     toggleMessageSelection = { messageId ->
                         viewModel.toggleSelectedEmail(messageId)
                     },
-                    accessLLM = {
-                        viewModel.accessLLM()
+                    chatWithLLM = { question, model ->
+                        viewModel.chatWithLLM(question, model)
                     }
                 )
             }

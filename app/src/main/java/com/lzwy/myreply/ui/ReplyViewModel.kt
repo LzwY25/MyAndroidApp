@@ -5,25 +5,22 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lzwy.myreply.data.Message
 import com.lzwy.myreply.data.MessageRepository
 import com.lzwy.myreply.data.MessageRepositoryImpl
 import com.lzwy.myreply.data.llm.ILlmRequestManager
+import com.lzwy.myreply.data.llm.LlmMessage
 import com.lzwy.myreply.data.llm.LlmRequestManagerImpl
 import com.lzwy.myreply.data.llm.LlmResponseData
+import com.lzwy.myreply.data.llm.Model
 import com.lzwy.myreply.data.remote.RetrofitManager
 import com.lzwy.myreply.ui.utils.createAndCompressImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -39,6 +36,7 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
 
     // UI state exposed to the UI
     private val _uiState = MutableStateFlow(ReplyHomeUIState(loading = true))
+    private val _conversationState = MutableStateFlow(ConversationState())
     private val requestManager: ILlmRequestManager by lazy { LlmRequestManagerImpl() }
     val uiState: StateFlow<ReplyHomeUIState> = _uiState
     private val _llmState = MutableStateFlow("")
@@ -81,8 +79,8 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
         )
     }
 
-    fun accessLLM() {
-        Log.i(TAG, "accessLLM")
+    fun chatWithLLM(question: String = "你好", model: Model = Model.BearOne) {
+        Log.i(TAG, "chatWithLLM, question: $question, model: $model")
         requestManager.request(
             viewModelScope,
             object : ILlmRequestManager.IListener {
@@ -97,7 +95,14 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
                         CoroutineScope(Dispatchers.Main).launch {
                             _llmState.value = answer
                         }
-                        Log.i(TAG, "get content: $answer")
+                        if (it.responseFinish) {
+                            _conversationState.value =
+                                _conversationState.value.copy(
+                                    isAsking = false,
+                                    historyList = requestManager.getHistoryList()
+                                )
+                        }
+                        Log.i(TAG, "get content: $answer, isIncremental: ${it.responseFinish}")
                     }
                 }
 
@@ -108,7 +113,7 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
                     }
                 }
             },
-            "介绍一下你自己"
+            question
         )
     }
 
@@ -175,4 +180,10 @@ data class ReplyHomeUIState(
     val isWriting: Boolean = false,
     val error: String? = null,
     val lastReply: String = "12345"
+)
+
+data class ConversationState(
+    var isAsking: Boolean = false,
+    var model: Model = Model.BearOne,
+    var historyList: List<LlmMessage> = emptyList()
 )

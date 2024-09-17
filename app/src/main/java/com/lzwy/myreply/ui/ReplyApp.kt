@@ -2,35 +2,27 @@ package com.lzwy.myreply.ui
 
 import android.util.Log
 import androidx.compose.material3.Surface
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.window.core.layout.WindowSizeClass
-import androidx.window.layout.DisplayFeature
-import androidx.window.layout.FoldingFeature
+import com.lzwy.myreply.data.llm.Model
 import com.lzwy.myreply.ui.component.conversation.Conversation
 import com.lzwy.myreply.ui.navigation.ReplyNavigationActions
 import com.lzwy.myreply.ui.navigation.ReplyNavigationWrapper
 import com.lzwy.myreply.ui.navigation.ReplyRoute
-import com.lzwy.myreply.ui.utils.ReplyContentType
-import com.lzwy.myreply.ui.utils.ReplyNavigationType
-import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ReplyApp(
     replyHomeUIState: ReplyHomeUIState,
     llmState: String,
     closeDetailScreen: () -> Unit = {},
-    accessLLM: () -> Unit,
+    chatWithLLM: (String, Model) -> Unit,
     navigateToDetail: (Long) -> Unit = { _ -> },
     navigateToWrite: () -> Unit,
     toggleMessageSelection: (Long) -> Unit = { }
@@ -53,7 +45,7 @@ fun ReplyApp(
                 replyHomeUIState = replyHomeUIState,
                 llmState = llmState,
                 closeDetailScreen = closeDetailScreen,
-                accessLLM = accessLLM,
+                chatWithLLM = chatWithLLM,
                 navigateToDetail = navigateToDetail,
                 navigateToWrite = navigateToWrite,
                 toggleMessageSelection = toggleMessageSelection,
@@ -68,7 +60,7 @@ private fun ReplyNavHost(
     replyHomeUIState: ReplyHomeUIState,
     llmState: String,
     closeDetailScreen: () -> Unit,
-    accessLLM: () -> Unit,
+    chatWithLLM: (String, Model) -> Unit,
     navigateToDetail: (Long) -> Unit,
     navigateToWrite: () -> Unit,
     toggleMessageSelection: (Long) -> Unit,
@@ -92,9 +84,9 @@ private fun ReplyNavHost(
             fun onBackPressed() {
                 navController.popBackStack()
             }
-            Conversation(uiState = replyHomeUIState,
+            Conversation(
                 llmState = llmState,
-                accessLLM = accessLLM,
+                chatWithLLM = chatWithLLM,
                 onBackPressed = { onBackPressed() },
                 onChannelChanged = { channel -> Log.i("LZWY", "onChannelChanged: $channel") }
                 )

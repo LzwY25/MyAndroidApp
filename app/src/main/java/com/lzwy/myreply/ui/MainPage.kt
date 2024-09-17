@@ -1,3 +1,4 @@
+/*
 package com.lzwy.myreply.ui
 
 import android.annotation.SuppressLint
@@ -76,4 +77,4 @@ fun ProfileScreen() {
 @Composable
 fun SettingsScreen() {
 
-}
+}*/

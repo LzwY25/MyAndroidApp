@@ -115,12 +115,15 @@ fun ReplyMessageListItem(
             Text(
                 text = message.title,
                 style = MaterialTheme.typography.bodyLarge,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
             )
             Text(
                 text = message.content,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 overflow = TextOverflow.Ellipsis
             )
         }

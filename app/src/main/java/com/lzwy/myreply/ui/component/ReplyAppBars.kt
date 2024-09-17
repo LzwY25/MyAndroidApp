@@ -4,16 +4,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DockedSearchBar
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -25,6 +29,7 @@ import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -159,7 +164,6 @@ fun ReplyDockedSearchBar(
     )
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageDetailAppBar(
@@ -208,6 +212,63 @@ fun MessageDetailAppBar(
                         modifier = Modifier.size(14.dp)
                     )
                 }
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = { /*TODO*/ },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = stringResource(id = R.string.more_options_button),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatAppBar(
+    channels: List<String>,
+    modifier: Modifier = Modifier,
+    onBackPressed: () -> Unit,
+    onChannelChanged: (String) -> Unit
+) {
+    var selectedChannel by remember { mutableStateOf(channels.first()) }
+    var dropdownExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    TopAppBar(
+        modifier = modifier,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.inverseOnSurface
+        ),
+        title = {
+            DropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                for (channel in channels) {
+                    DropdownMenuItem(onClick = { onChannelChanged(channel) }) {
+                        Text(text = channel)
+                    }
+                }
+            }
+        },
+        navigationIcon = {
+            FilledIconButton(
+                onClick = onBackPressed,
+                modifier = Modifier.padding(8.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(id = R.string.back_button),
+                    modifier = Modifier.size(14.dp)
+                )
             }
         },
         actions = {

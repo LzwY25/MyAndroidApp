@@ -1,11 +1,14 @@
 package com.lzwy.myreply.ui
 
+import android.util.Log
 import androidx.compose.material3.Surface
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,22 +17,24 @@ import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.layout.DisplayFeature
 import androidx.window.layout.FoldingFeature
+import com.lzwy.myreply.ui.component.conversation.Conversation
 import com.lzwy.myreply.ui.navigation.ReplyNavigationActions
 import com.lzwy.myreply.ui.navigation.ReplyNavigationWrapper
 import com.lzwy.myreply.ui.navigation.ReplyRoute
 import com.lzwy.myreply.ui.utils.ReplyContentType
 import com.lzwy.myreply.ui.utils.ReplyNavigationType
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ReplyApp(
-    displayFeatures: List<DisplayFeature>,
     replyHomeUIState: ReplyHomeUIState,
+    llmState: String,
     closeDetailScreen: () -> Unit = {},
-    navigateToDetail: (Long, ReplyContentType) -> Unit = { _, _ -> },
-    toggleSelectedEmail: (Long) -> Unit = { }
+    accessLLM: () -> Unit,
+    navigateToDetail: (Long) -> Unit = { _ -> },
+    navigateToWrite: () -> Unit,
+    toggleMessageSelection: (Long) -> Unit = { }
 ) {
-    val contentType = ReplyContentType.SINGLE_PANE
-
     val navController = rememberNavController()
     val navigationActions = remember(navController) {
         ReplyNavigationActions(navController)
@@ -45,13 +50,13 @@ fun ReplyApp(
         ) {
             ReplyNavHost(
                 navController = navController,
-                contentType = contentType,
-                displayFeatures = displayFeatures,
                 replyHomeUIState = replyHomeUIState,
-                navigationType = ReplyNavigationType.BOTTOM_NAVIGATION,
+                llmState = llmState,
                 closeDetailScreen = closeDetailScreen,
+                accessLLM = accessLLM,
                 navigateToDetail = navigateToDetail,
-                toggleSelectedEmail = toggleSelectedEmail,
+                navigateToWrite = navigateToWrite,
+                toggleMessageSelection = toggleMessageSelection,
             )
         }
     }
@@ -60,13 +65,13 @@ fun ReplyApp(
 @Composable
 private fun ReplyNavHost(
     navController: NavHostController,
-    contentType: ReplyContentType,
-    displayFeatures: List<DisplayFeature>,
     replyHomeUIState: ReplyHomeUIState,
-    navigationType: ReplyNavigationType,
+    llmState: String,
     closeDetailScreen: () -> Unit,
-    navigateToDetail: (Long, ReplyContentType) -> Unit,
-    toggleSelectedEmail: (Long) -> Unit,
+    accessLLM: () -> Unit,
+    navigateToDetail: (Long) -> Unit,
+    navigateToWrite: () -> Unit,
+    toggleMessageSelection: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -76,17 +81,23 @@ private fun ReplyNavHost(
     ) {
         composable(ReplyRoute.INBOX) {
             ReplyInboxScreen(
-                contentType = contentType,
                 replyHomeUIState = replyHomeUIState,
-                navigationType = navigationType,
-                displayFeatures = displayFeatures,
                 closeDetailScreen = closeDetailScreen,
                 navigateToDetail = navigateToDetail,
-                toggleSelectedEmail = toggleSelectedEmail
+                navigateToWrite = navigateToWrite,
+                toggleMessageSelection = toggleMessageSelection
             )
         }
         composable(ReplyRoute.CHAT) {
-            EmptyComingSoon()
+            fun onBackPressed() {
+                navController.popBackStack()
+            }
+            Conversation(uiState = replyHomeUIState,
+                llmState = llmState,
+                accessLLM = accessLLM,
+                onBackPressed = { onBackPressed() },
+                onChannelChanged = { channel -> Log.i("LZWY", "onChannelChanged: $channel") }
+                )
         }
         composable(ReplyRoute.ABOUT_ME) {
             EmptyComingSoon()

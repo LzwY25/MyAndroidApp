@@ -26,4 +26,5 @@
     <string name="search_emails">Search emails</string>
     <string name="no_item_found">No item found</string>
     <string name="no_search_history">No search history</string>
+    <string name="close">Close</string>
 </resources>

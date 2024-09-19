@@ -2,6 +2,7 @@ package com.lzwy.myreply.ui.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lzwy.myreply.R
@@ -248,10 +250,26 @@ fun ChatAppBar(
             containerColor = MaterialTheme.colorScheme.inverseOnSurface
         ),
         title = {
-            DropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                for (channel in channels) {
-                    DropdownMenuItem(onClick = { onChannelChanged(channel) }) {
-                        Text(text = channel)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    modifier = Modifier.clickable { dropdownExpanded = true },
+                    text = selectedChannel,
+                    textAlign = TextAlign.Center
+                )
+
+                DropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                    for (channel in channels) {
+                        DropdownMenuItem(onClick = {
+                            selectedChannel = channel
+                            dropdownExpanded = false
+                            onChannelChanged(channel)
+                        }) {
+                            Text(text = channel)
+                        }
                     }
                 }
             }

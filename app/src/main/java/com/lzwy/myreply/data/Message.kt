@@ -1,5 +1,11 @@
 package com.lzwy.myreply.data
 
+data class TextMessage(
+    val title: String,
+    val content: String,
+
+)
+
 data class Message(
     val id: Long = 0L,
     val title: String = "Test: ${System.currentTimeMillis()}",

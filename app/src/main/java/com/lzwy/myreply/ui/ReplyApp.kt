@@ -20,8 +20,10 @@ import com.lzwy.myreply.ui.navigation.ReplyRoute
 @Composable
 fun ReplyApp(
     replyHomeUIState: ReplyHomeUIState,
-    llmState: String,
+    conversationState: ConversationState,
+    llmLastReply: String,
     closeDetailScreen: () -> Unit = {},
+    setLlmModel: (String) -> Unit,
     chatWithLLM: (String, Model) -> Unit,
     navigateToDetail: (Long) -> Unit = { _ -> },
     navigateToWrite: () -> Unit,
@@ -43,8 +45,10 @@ fun ReplyApp(
             ReplyNavHost(
                 navController = navController,
                 replyHomeUIState = replyHomeUIState,
-                llmState = llmState,
+                conversationState = conversationState,
+                llmLastReply = llmLastReply,
                 closeDetailScreen = closeDetailScreen,
+                setLlmModel = setLlmModel,
                 chatWithLLM = chatWithLLM,
                 navigateToDetail = navigateToDetail,
                 navigateToWrite = navigateToWrite,
@@ -58,8 +62,10 @@ fun ReplyApp(
 private fun ReplyNavHost(
     navController: NavHostController,
     replyHomeUIState: ReplyHomeUIState,
-    llmState: String,
+    conversationState: ConversationState,
+    llmLastReply: String,
     closeDetailScreen: () -> Unit,
+    setLlmModel: (String) -> Unit,
     chatWithLLM: (String, Model) -> Unit,
     navigateToDetail: (Long) -> Unit,
     navigateToWrite: () -> Unit,
@@ -81,15 +87,13 @@ private fun ReplyNavHost(
             )
         }
         composable(ReplyRoute.CHAT) {
-            fun onBackPressed() {
-                navController.popBackStack()
-            }
             Conversation(
-                llmState = llmState,
+                conversationState = conversationState,
+                llmLastReply = llmLastReply,
+                setLlmModel = setLlmModel,
                 chatWithLLM = chatWithLLM,
-                onBackPressed = { onBackPressed() },
-                onChannelChanged = { channel -> Log.i("LZWY", "onChannelChanged: $channel") }
-                )
+                onBackPressed = { navController.popBackStack() }
+            )
         }
         composable(ReplyRoute.ABOUT_ME) {
             EmptyComingSoon()

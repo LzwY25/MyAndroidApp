@@ -25,10 +25,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             ContrastAwareReplyTheme {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                val llmState by viewModel.llmState.collectAsStateWithLifecycle()
+
+                val conversationState by viewModel.conversationState.collectAsStateWithLifecycle()
+                val llmLastReply by viewModel.llmLastReply.collectAsStateWithLifecycle()
                 ReplyApp(
                     replyHomeUIState = uiState,
-                    llmState = llmState,
+                    llmLastReply = llmLastReply,
+                    conversationState = conversationState,
                     closeDetailScreen = {
                         viewModel.closeDetailScreen()
                     },
@@ -40,6 +43,9 @@ class MainActivity : ComponentActivity() {
                     },
                     toggleMessageSelection = { messageId ->
                         viewModel.toggleSelectedEmail(messageId)
+                    },
+                    setLlmModel = { model ->
+                        viewModel.setLlmModel(model)
                     },
                     chatWithLLM = { question, model ->
                         viewModel.chatWithLLM(question, model)

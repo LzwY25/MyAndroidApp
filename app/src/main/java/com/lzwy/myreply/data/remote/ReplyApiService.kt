@@ -5,6 +5,7 @@ import com.lzwy.myreply.data.Message
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -26,7 +27,7 @@ interface ReplyApiService {
         @Part("time") time: Long,
         @Part images: List<MultipartBody.Part>?,
         @Part record: MultipartBody.Part?
-    ): Response<Message>
+    ): Response<ResponseMessage>
 
     // for record
     @GET

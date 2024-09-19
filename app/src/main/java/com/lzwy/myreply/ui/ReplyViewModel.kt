@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lzwy.myreply.data.ChatItem
 import com.lzwy.myreply.data.Message
 import com.lzwy.myreply.data.MessageRepository
 import com.lzwy.myreply.data.MessageRepositoryImpl
@@ -17,16 +18,19 @@ import com.lzwy.myreply.data.remote.RetrofitManager
 import com.lzwy.myreply.ui.utils.createAndCompressImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.get
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.http.Multipart
 import java.io.File
 
 private const val TAG = "ReplyViewModel"
@@ -37,10 +41,12 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
     // UI state exposed to the UI
     private val _uiState = MutableStateFlow(ReplyHomeUIState(loading = true))
     private val _conversationState = MutableStateFlow(ConversationState())
+    private val _llmLastReply = MutableStateFlow("")
     private val requestManager: ILlmRequestManager by lazy { LlmRequestManagerImpl() }
     val uiState: StateFlow<ReplyHomeUIState> = _uiState
-    private val _llmState = MutableStateFlow("")
-    val llmState: StateFlow<String> = _llmState
+    val conversationState: StateFlow<ConversationState> = _conversationState
+    val llmLastReply: StateFlow<String> = _llmLastReply
+    val historyList: MutableList<ChatItem> = mutableListOf()
 
     init {
         observeEmails()
@@ -73,14 +79,36 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
         )
     }
 
-    fun setWriting() {
+    fun setWriting(isWriting: Boolean = true) {
         _uiState.value = _uiState.value.copy(
-            isWriting = true
+            isWriting = isWriting
         )
+    }
+
+    private fun updateHistoryList(content: String, isUser: Boolean) {
+        historyList.add(ChatItem(isUser, content))
+        _conversationState.value =
+            _conversationState.value.copy(
+                historyList = historyList.toList()
+            )
+    }
+
+    fun setLlmModel(displayName: String) {
+        val model = Model.entries.find { it.displayName == displayName }
+        _conversationState.value =
+            _conversationState.value.copy(
+                model = model ?: Model.BearOne
+            )
     }
 
     fun chatWithLLM(question: String = "你好", model: Model = Model.BearOne) {
         Log.i(TAG, "chatWithLLM, question: $question, model: $model")
+        updateHistoryList(question, true)
+        _llmLastReply.value = ""
+        _conversationState.value =
+            _conversationState.value.copy(
+                isAsking = true
+            )
         requestManager.request(
             viewModelScope,
             object : ILlmRequestManager.IListener {
@@ -93,23 +121,25 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
                             answer = it.content
                         }
                         CoroutineScope(Dispatchers.Main).launch {
-                            _llmState.value = answer
+                            _llmLastReply.value = answer
                         }
                         if (it.responseFinish) {
                             _conversationState.value =
                                 _conversationState.value.copy(
                                     isAsking = false,
-                                    historyList = requestManager.getHistoryList()
                                 )
+                            updateHistoryList(answer, false)
+                            Log.i(TAG, "llm response finish, update status: ${_conversationState.value.historyList.size}")
                         }
-                        Log.i(TAG, "get content: $answer, isIncremental: ${it.responseFinish}")
+                        // todo: exception handle
+                        Log.d(TAG, "get content: $answer")
                     }
                 }
 
                 override fun onException(errorMessage: String?) {
                     Log.e(TAG, "Access LLM error: $errorMessage")
                     CoroutineScope(Dispatchers.Main).launch {
-                        _llmState.value = "error"
+                        _llmLastReply.value = "error"
                     }
                 }
             },
@@ -119,40 +149,33 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
 
     fun finishWriting(context: Context, title: String = "", body: String = "", uris: List<Uri>, record: String) {
         viewModelScope.launch {
-            val imagesList: MutableList<MultipartBody.Part> = mutableListOf()
-            for(uri in uris) {
-
-                val file = createAndCompressImage(context, uri)
-                val requestFile = file?.asRequestBody("multipart/form-data".toMediaTypeOrNull())
-                if (requestFile != null) {
-                    // images might mean API's name. it need to store in a val
-                    imagesList.add(MultipartBody.Part.createFormData("images", file.name, requestFile))
+            var imagesList: MutableList<MultipartBody.Part>? = null
+            if (uris.isNotEmpty()) {
+                imagesList = mutableListOf()
+                for(uri in uris) {
+                    val file = createAndCompressImage(context, uri)
+                    val requestFile = file?.asRequestBody("multipart/form-data".toMediaTypeOrNull())
+                    if (requestFile != null) {
+                        // images might mean API's name. it need to store in a val
+                        imagesList.add(MultipartBody.Part.createFormData("images", file.name, requestFile))
+                    }
                 }
             }
-            // TODO: delegate as 3 func, with both record and image, with only record, with only image
-            if(imagesList.isEmpty()) {
-                val emptyFile: RequestBody = "".toRequestBody("image/*".toMediaTypeOrNull())
-                val emptyPart: MultipartBody.Part = MultipartBody.Part.createFormData("images", "empty.jpg", emptyFile)
-                imagesList.add(emptyPart)
-            }
             val recordFile: File?
-            val filePart: MultipartBody.Part?
+            var filePart: MultipartBody.Part? = null
             if(record.isNotEmpty()) {
                 recordFile = File(record)
                 val requestBody: RequestBody = RequestBody.create("multipart/form-data".toMediaTypeOrNull(), recordFile)
                 filePart = MultipartBody.Part.createFormData("record", recordFile.name, requestBody)
             }
-            else {
-                val emptyFile: RequestBody = "".toRequestBody("image/*".toMediaTypeOrNull())
-                filePart = MultipartBody.Part.createFormData("images", "empty.jpg", emptyFile)
-            }
             Log.i(TAG, "record: $record")
-            RetrofitManager.getReplyApiService().uploadMessage(4L, title, body!!,
-                System.currentTimeMillis(), imagesList, filePart)
-
-            delay(2000)
-            // TODO: modify as async & wait for the response
-            observeEmails()
+            async {
+                RetrofitManager.getReplyApiService().uploadMessage(4L, title, body,
+                    System.currentTimeMillis(), imagesList, filePart)
+            }.await().apply {
+                setWriting(false)
+                observeEmails()
+            }
         }
     }
 
@@ -185,5 +208,5 @@ data class ReplyHomeUIState(
 data class ConversationState(
     var isAsking: Boolean = false,
     var model: Model = Model.BearOne,
-    var historyList: List<LlmMessage> = emptyList()
+    var historyList: List<ChatItem> = emptyList()
 )

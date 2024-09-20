@@ -38,8 +38,11 @@ class MainActivity : ComponentActivity() {
                     navigateToDetail = { messageId ->
                         viewModel.setOpenedEmail(messageId)
                     },
-                    navigateToWrite = {
-                        viewModel.setWriting()
+                    navigateToWrite = { isOpened ->
+                        viewModel.setWriting(isOpened)
+                    },
+                    finishWriting = { title, content, images, record ->
+                        viewModel.finishWriting(this, title, content, images, record)
                     },
                     toggleMessageSelection = { messageId ->
                         viewModel.toggleSelectedEmail(messageId)

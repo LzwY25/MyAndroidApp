@@ -12,7 +12,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -119,6 +118,10 @@ fun WriteMessage(
     }
     var hasImage by remember {
         mutableStateOf(false)
+    }
+
+    var recordStatus by remember {
+        mutableStateOf(RECORDSTATUS.IDLE)
     }
 
     var isRecording by remember {
@@ -271,6 +274,7 @@ fun WriteMessage(
                                             recordingDir.mkdirs()
                                         }
                                         val fileName = "${recordingDir?.absolutePath}/recording_$timeStamp.3gp"
+                                        Log.i("MediarRecorder", "save record at: $fileName")
                                         recordFileName = fileName
                                         mediaRecorder = MediaRecorder(localContext)
                                         mediaRecorder?.apply {
@@ -466,10 +470,11 @@ fun WriteMessage(
                                     .fillMaxWidth()
                                     .aspectRatio(1F)
                                 Box(
-                                    modifier = Modifier.animateItem(
-                                        fadeInSpec = null,
-                                        fadeOutSpec = null
-                                    )
+                                    modifier = Modifier
+                                        .animateItem(
+                                            fadeInSpec = null,
+                                            fadeOutSpec = null
+                                        )
                                         .padding(
                                             start = if (needStart) 2.dp else 0.dp,
                                             bottom = 2.dp
@@ -601,6 +606,7 @@ fun WriteMessage(
         if(!previewerState.visible) {
             FloatingActionButton(
                 onClick = {
+                    Log.i(TAG, "Floating button clicked!")
                     if(!previewerState.visible) {
                         // double check
                         finishWriting(title.text, content.text,

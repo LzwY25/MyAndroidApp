@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitManager {
 
-    private const val REPLY_API_URL = ""
+    private const val REPLY_API_URL = "http://117.72.86.98:8080"
     private const val ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/"
 
     private var replyApiService: ReplyApiService? = null

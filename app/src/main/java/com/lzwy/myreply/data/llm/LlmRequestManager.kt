@@ -178,7 +178,7 @@ class LlmRequestManagerImpl : ILlmRequestManager {
             val requestData = ZhipuApiRequestData()
             val api = RetrofitManager.getZhipuApiService()
 
-            requestData.model = "glm-4v"
+            requestData.model = "glm-4"
             Log.i(TAG, "model is ${requestData.model}")
 
             systemMsgList.clear()

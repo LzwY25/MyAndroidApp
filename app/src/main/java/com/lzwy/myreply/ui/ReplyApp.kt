@@ -1,5 +1,6 @@
 package com.lzwy.myreply.ui
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -26,7 +27,8 @@ fun ReplyApp(
     setLlmModel: (String) -> Unit,
     chatWithLLM: (String, Model) -> Unit,
     navigateToDetail: (Long) -> Unit = { _ -> },
-    navigateToWrite: () -> Unit,
+    navigateToWrite: (Boolean) -> Unit,
+    finishWriting: (String, String, List<Uri>?, String?) -> Unit,
     toggleMessageSelection: (Long) -> Unit = { }
 ) {
     val navController = rememberNavController()
@@ -52,6 +54,7 @@ fun ReplyApp(
                 chatWithLLM = chatWithLLM,
                 navigateToDetail = navigateToDetail,
                 navigateToWrite = navigateToWrite,
+                finishWriting = finishWriting,
                 toggleMessageSelection = toggleMessageSelection,
             )
         }
@@ -68,7 +71,8 @@ private fun ReplyNavHost(
     setLlmModel: (String) -> Unit,
     chatWithLLM: (String, Model) -> Unit,
     navigateToDetail: (Long) -> Unit,
-    navigateToWrite: () -> Unit,
+    navigateToWrite: (Boolean) -> Unit,
+    finishWriting: (String, String, List<Uri>?, String?) -> Unit,
     toggleMessageSelection: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,10 +83,12 @@ private fun ReplyNavHost(
     ) {
         composable(ReplyRoute.INBOX) {
             ReplyInboxScreen(
+                navController = navController,
                 replyHomeUIState = replyHomeUIState,
                 closeDetailScreen = closeDetailScreen,
                 navigateToDetail = navigateToDetail,
                 navigateToWrite = navigateToWrite,
+                finishWriting = finishWriting,
                 toggleMessageSelection = toggleMessageSelection
             )
         }

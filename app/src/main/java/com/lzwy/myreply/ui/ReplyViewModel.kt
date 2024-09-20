@@ -10,7 +10,6 @@ import com.lzwy.myreply.data.Message
 import com.lzwy.myreply.data.MessageRepository
 import com.lzwy.myreply.data.MessageRepositoryImpl
 import com.lzwy.myreply.data.llm.ILlmRequestManager
-import com.lzwy.myreply.data.llm.LlmMessage
 import com.lzwy.myreply.data.llm.LlmRequestManagerImpl
 import com.lzwy.myreply.data.llm.LlmResponseData
 import com.lzwy.myreply.data.llm.Model
@@ -19,18 +18,13 @@ import com.lzwy.myreply.ui.utils.createAndCompressImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.get
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
-import retrofit2.http.Multipart
 import java.io.File
 
 private const val TAG = "ReplyViewModel"
@@ -49,26 +43,18 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
     val historyList: MutableList<ChatItem> = mutableListOf()
 
     init {
-        observeEmails()
+        observeMessages()
     }
 
-    private fun observeEmails() {
+    private fun observeMessages() {
+        Log.i(TAG, "observeEmails")
         viewModelScope.launch {
-            emailsRepository.getAllEmails()
-                .catch { ex ->
-                    _uiState.value = ReplyHomeUIState(error = ex.message)
-                }
-                .collect { messages ->
-                    /**
-                     * We set first message selected by default for first App launch in large-screens
-                     */
-                    val newList = _uiState.value.messages.toMutableList()
-                    newList.addAll(messages)
-                    _uiState.value = ReplyHomeUIState(
-                        messages = newList.toList(),
-                        openedMessage = null
-                    )
-                }
+            val response = RetrofitManager.getReplyApiService().getAllMessages()
+            Log.i(TAG, "observeMessages: code: ${response.code}, size: ${response.content?.size}")
+
+            _uiState.value = _uiState.value.copy(
+                messages = response.content ?: emptyList()
+            )
         }
     }
 
@@ -80,6 +66,7 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
     }
 
     fun setWriting(isWriting: Boolean = true) {
+        // TODO: clear relative data
         _uiState.value = _uiState.value.copy(
             isWriting = isWriting
         )
@@ -147,10 +134,11 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
         )
     }
 
-    fun finishWriting(context: Context, title: String = "", body: String = "", uris: List<Uri>, record: String) {
+    fun finishWriting(context: Context, title: String = "", body: String = "", uris: List<Uri>?, record: String?) {
+        Log.i(TAG, "finishWriting: title: $title, body: $body, hasImages: ${!uris.isNullOrEmpty()}, hasRecord: ${!record.isNullOrEmpty()}")
         viewModelScope.launch {
             var imagesList: MutableList<MultipartBody.Part>? = null
-            if (uris.isNotEmpty()) {
+            if (!uris.isNullOrEmpty()) {
                 imagesList = mutableListOf()
                 for(uri in uris) {
                     val file = createAndCompressImage(context, uri)
@@ -163,7 +151,7 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
             }
             val recordFile: File?
             var filePart: MultipartBody.Part? = null
-            if(record.isNotEmpty()) {
+            if(!record.isNullOrEmpty()) {
                 recordFile = File(record)
                 val requestBody: RequestBody = RequestBody.create("multipart/form-data".toMediaTypeOrNull(), recordFile)
                 filePart = MultipartBody.Part.createFormData("record", recordFile.name, requestBody)
@@ -173,8 +161,8 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
                 RetrofitManager.getReplyApiService().uploadMessage(4L, title, body,
                     System.currentTimeMillis(), imagesList, filePart)
             }.await().apply {
+                observeMessages()
                 setWriting(false)
-                observeEmails()
             }
         }
     }

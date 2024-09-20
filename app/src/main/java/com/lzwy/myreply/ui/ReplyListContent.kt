@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.lzwy.myreply.R
 import com.lzwy.myreply.data.Message
@@ -57,14 +58,17 @@ import com.lzwy.myreply.ui.component.FullScreenImage
 import com.lzwy.myreply.ui.component.MessageDetailAppBar
 import com.lzwy.myreply.ui.component.ReplyDockedSearchBar
 import com.lzwy.myreply.ui.component.ReplyMessageListItem
+import com.lzwy.myreply.ui.component.writemessage.WriteMessage
 import java.io.IOException
 
 @Composable
 fun ReplyInboxScreen(
+    navController: NavHostController,
     replyHomeUIState: ReplyHomeUIState,
     closeDetailScreen: () -> Unit,
     navigateToDetail: (Long) -> Unit,
-    navigateToWrite: () -> Unit,
+    navigateToWrite: (Boolean) -> Unit,
+    finishWriting: (String, String, List<Uri>?, String?) -> Unit,
     toggleMessageSelection: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -74,38 +78,46 @@ fun ReplyInboxScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         ReplySinglePaneContent(
+            navController = navController,
             replyHomeUIState = replyHomeUIState,
             toggleMessageSelection = toggleMessageSelection,
             messageLazyListState = messageLazyListState,
             modifier = Modifier.fillMaxSize(),
             closeDetailScreen = closeDetailScreen,
+            navigateToWrite = navigateToWrite,
+            finishWriting = finishWriting,
             navigateToDetail = navigateToDetail
         )
 
-        FloatingActionButton(
-            onClick = { navigateToWrite() },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = stringResource(id = R.string.compose),
-                modifier = Modifier.size(28.dp)
-            )
+        if (!replyHomeUIState.isWriting) {
+            FloatingActionButton(
+                onClick = { navigateToWrite(true) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(id = R.string.compose),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
 fun ReplySinglePaneContent(
+    navController: NavHostController,
     replyHomeUIState: ReplyHomeUIState,
     toggleMessageSelection: (Long) -> Unit,
     messageLazyListState: LazyListState,
     modifier: Modifier = Modifier,
     closeDetailScreen: () -> Unit,
+    navigateToWrite: (Boolean) -> Unit,
+    finishWriting: (String, String, List<Uri>?, String?) -> Unit,
     navigateToDetail: (Long) -> Unit
 ) {
     if (replyHomeUIState.openedMessage != null) {
@@ -115,6 +127,14 @@ fun ReplySinglePaneContent(
         ReplyMessageDetail(message = replyHomeUIState.openedMessage) {
             closeDetailScreen()
         }
+    } else if (replyHomeUIState.isWriting) {
+        BackHandler {
+            navigateToWrite(false)
+        }
+        WriteMessage(
+            navController = navController,
+            replyHomeUIState = replyHomeUIState,
+            finishWriting = finishWriting)
     } else {
         ReplyMessageList(
             messages = replyHomeUIState.messages,
@@ -288,7 +308,7 @@ fun ReplyMessageDetail(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline)
 
-                val imageUri = message.images
+                val imageUri = message.images.split(",")
                 Log.i("LZWY", "imageUri: ${imageUri.size}")
                 LazyVerticalGrid(columns = GridCells.Fixed(3),
                     modifier = Modifier.height(222.dp),

@@ -1,6 +1,7 @@
 package com.lzwy.myreply.ui.component.writemessage
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
@@ -8,12 +9,12 @@ import android.net.Uri
 import android.os.CountDownTimer
 import android.os.Environment
 import android.util.Log
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,7 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -44,17 +45,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.mapSaver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
@@ -63,16 +59,13 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.jvziyaoyao.scale.image.previewer.ImagePreviewer
+import com.jvziyaoyao.scale.image.previewer.TransformImageView
+import com.jvziyaoyao.scale.image.viewer.ImageViewer
+import com.jvziyaoyao.scale.zoomable.previewer.rememberPreviewerState
+import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.lzwy.myreply.R
 import com.lzwy.myreply.ui.ReplyHomeUIState
-import com.lzwy.myreply.ui.imageViewer.previewer.ImagePreviewer
-import com.lzwy.myreply.ui.imageViewer.previewer.TransformImageView
-import com.lzwy.myreply.ui.imageViewer.previewer.VerticalDragType
-import com.lzwy.myreply.ui.imageViewer.previewer.rememberPreviewerState
-import com.lzwy.myreply.ui.imageViewer.previewer.rememberTransformItemState
-import com.lzwy.myreply.ui.imageViewer.util.DetectScaleGridGesture
-import com.lzwy.myreply.ui.imageViewer.util.ScaleGrid
-import com.lzwy.myreply.ui.imageViewer.util.rememberCoilImagePainter
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyGridState
@@ -83,6 +76,20 @@ import java.util.Date
 import java.util.Locale
 
 private const val TAG = "WriteMessage"
+
+enum class RECORD_STATUS {
+    IDLE,
+    RECORDING,
+    RECORD_PAUSED,
+    FINISHED,
+    PLAYING,
+    PLAY_PAUSED
+}
+
+var recordingDurationMillis: Int = 0
+var recordingTimer: CountDownTimer? = null
+var mediaRecorder: MediaRecorder? = null
+var recordFileName: String? = null
 
 @Composable
 fun WriteMessage(
@@ -106,59 +113,19 @@ fun WriteMessage(
             Log.d(TAG,"PERMISSION DENIED")
         }
     }
-    var recordingDurationMillis by remember { mutableLongStateOf(0L) }
-    var recordingTimer: CountDownTimer? = null
 
+    val scope = rememberCoroutineScope()
     val localContext = LocalContext.current
-    var mediaRecorder: MediaRecorder? = null
-    var recordFileName: String = ""
-
     var imageUri by remember {
         mutableStateOf<List<Uri>>(emptyList())
     }
     var hasImage by remember {
         mutableStateOf(false)
     }
+    val previewState = rememberPreviewerState(pageCount = { imageUri.size }) { imageUri[it] }
 
     var recordStatus by remember {
-        mutableStateOf(RECORDSTATUS.IDLE)
-    }
-
-    var isRecording by remember {
-        mutableStateOf(false)
-    }
-    var isRecordingPause by remember {
-        mutableStateOf(false)
-    }
-    var isRecorded by remember {
-        mutableStateOf(false)
-    }
-
-    var isPlaying by remember {
-        mutableStateOf(false)
-    }
-    var isPlayingPause by remember {
-        mutableStateOf(false)
-    }
-
-    val scope = rememberCoroutineScope()
-    val settingState = rememberSettingState()
-    val previewerState = rememberPreviewerState(
-        animationSpec = tween(settingState.animationDuration),
-        verticalDragType = settingState.verticalDrag,
-        pageCount = { imageUri.size }
-    ) {
-        it
-    }
-
-    if (previewerState.canClose || previewerState.animating) BackHandler {
-        if (previewerState.canClose) scope.launch {
-            if (settingState.transformExit) {
-                previewerState.closeTransform()
-            } else {
-                previewerState.close()
-            }
-        }
+        mutableStateOf(RECORD_STATUS.IDLE)
     }
 
     LaunchedEffect(key1 = replyHomeUIState.isWriting, block = {
@@ -205,7 +172,8 @@ fun WriteMessage(
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxSize()
-                .padding(bottom = 72.dp), // 留出底部空间以容纳 FloatingActionButton
+                .padding(bottom = 72.dp)
+                .scrollable(state = rememberScrollState(), orientation = Orientation.Vertical, enabled = false)// 留出底部空间以容纳 FloatingActionButton
         ) {
             item {
                 OutlinedTextField(
@@ -215,11 +183,12 @@ fun WriteMessage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp)
+                        .padding(top = 16.dp)
                 )
             }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             item {
@@ -247,69 +216,37 @@ fun WriteMessage(
 
             item {
                 Row {
-                    if(!isRecorded) {
+                    if (recordStatus == RECORD_STATUS.IDLE) {
                         Button(
                             onClick = {
-                                isRecording = !isRecording
-                                if(isRecording) {
-                                    if(!isRecordingPause) {
-                                        Log.i("MediaRecorder", "recording start")
-                                        recordingTimer = object : CountDownTimer(Long.MAX_VALUE, 1000) {
-                                            override fun onTick(millisUntilFinished: Long) {
-                                                recordingDurationMillis += 1
-                                            }
+                                record(localContext)
+                                recordStatus = RECORD_STATUS.RECORDING
+                            }
+                        ) {
+                            Text(text = "Record")
+                        }
+                    }
 
-                                            override fun onFinish() {
-                                                recordingDurationMillis = 0
-                                            }
-                                        }
-                                        recordingTimer?.start()
-                                        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(
-                                            Date()
-                                        )
-                                        val recordingDir = localContext.getExternalFilesDir(
-                                            Environment.DIRECTORY_MUSIC + "/MyRecordings")
-
-                                        if (recordingDir != null && !recordingDir.exists()) {
-                                            recordingDir.mkdirs()
-                                        }
-                                        val fileName = "${recordingDir?.absolutePath}/recording_$timeStamp.3gp"
-                                        Log.i("MediarRecorder", "save record at: $fileName")
-                                        recordFileName = fileName
-                                        mediaRecorder = MediaRecorder(localContext)
-                                        mediaRecorder?.apply {
-                                            setAudioSource(MediaRecorder.AudioSource.MIC)
-                                            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-                                            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-                                            setOutputFile(fileName)
-                                        }
-                                        try {
-                                            mediaRecorder?.prepare()
-                                            mediaRecorder?.start()
-                                        } catch (e: IOException) {
-                                            Log.e(TAG, e.toString())
-                                        }
-                                    }
-                                    else {
-                                        Log.i("MediaRecorder", "recording resume")
-                                        recordingTimer?.start()
-                                        mediaRecorder?.resume()
-                                        isRecordingPause = false
-                                    }
-                                }
-                                else {
+                    if (recordStatus == RECORD_STATUS.RECORDING || recordStatus == RECORD_STATUS.RECORD_PAUSED) {
+                        Button(
+                            onClick = {
+                                if (recordStatus == RECORD_STATUS.RECORDING) {
                                     Log.i("MediaRecorder", "recording pause")
                                     recordingTimer?.cancel()
                                     mediaRecorder?.pause()
-                                    isRecordingPause = true
+                                    recordStatus = RECORD_STATUS.RECORD_PAUSED
+                                } else {
+                                    Log.i("MediaRecorder", "recording resume")
+                                    recordingTimer?.start()
+                                    mediaRecorder?.resume()
+                                    recordStatus = RECORD_STATUS.RECORDING
                                 }
                             }
                         ) {
-                            if(!isRecording) {
-                                Text(text = "Record")
-                            }
-                            else {
-                                Text(text = "Pause")
+                            if (recordStatus == RECORD_STATUS.RECORDING) {
+                                Text(text = "PAUSE")
+                            } else {
+                                Text(text = "Resume")
                             }
                         }
                     }
@@ -318,7 +255,7 @@ fun WriteMessage(
                         .height(1.dp)
                         .width(4.dp))
 
-                    if(isRecording) {
+                    if(recordStatus == RECORD_STATUS.RECORDING) {
                         Button(onClick = {
                             Log.i("MediaRecorder", "recording clear")
                             recordingTimer?.onFinish()
@@ -327,7 +264,7 @@ fun WriteMessage(
                             mediaRecorder?.stop()
                             mediaRecorder?.release()
                             mediaRecorder = null
-                            isRecording = false
+                            recordStatus = RECORD_STATUS.IDLE
                         }) {
                             Text(text = "Clear")
                         }
@@ -340,29 +277,27 @@ fun WriteMessage(
                             mediaRecorder?.stop()
                             mediaRecorder?.release()
                             mediaRecorder = null
-                            isRecorded = true
-                            isRecording = false
+                            recordStatus = RECORD_STATUS.FINISHED
                         }) {
                             Text(text = "Save")
                         }
                     }
 
 
-                    if(!isRecorded && recordingDurationMillis > 0) {
+                    if(recordingDurationMillis > 0) {
                         Spacer(modifier = Modifier
                             .height(1.dp)
                             .width(4.dp))
                         Text(text = "Duration: $recordingDurationMillis s")
                     }
-                    if(isRecorded) {
+                    if(recordStatus >= RECORD_STATUS.FINISHED) {
                         val mediaPlayer = MediaPlayer()
                         Spacer(modifier = Modifier
                             .height(1.dp)
                             .width(12.dp))
                         Button(onClick = {
-                            if(!isPlaying) {
-                                isPlaying = true
-                                if(!isPlayingPause) {
+                            if(recordStatus != RECORD_STATUS.PLAYING) {
+                                if(recordStatus != RECORD_STATUS.PLAY_PAUSED) {
                                     mediaPlayer.let {
                                         if (it.isPlaying) {
                                             it.stop()
@@ -381,8 +316,6 @@ fun WriteMessage(
                                                 Log.d("MediaPlayer", "Playback completed")
                                                 stop()
                                                 reset()
-                                                isPlaying = false
-                                                isPlayingPause = false
                                             }
                                         }
                                     } catch (e: IOException) {
@@ -392,10 +325,10 @@ fun WriteMessage(
                                 else {
                                     mediaPlayer.start()
                                 }
+                                recordStatus = RECORD_STATUS.PLAYING
                             }
                             else {
-                                isPlaying = false
-                                isPlayingPause = true
+                                recordStatus = RECORD_STATUS.PLAY_PAUSED
                                 mediaPlayer.apply {
                                     if(this.isPlaying) {
                                         pause()
@@ -403,7 +336,7 @@ fun WriteMessage(
                                 }
                             }
                         }) {
-                            if(!isPlaying) {
+                            if(recordStatus != RECORD_STATUS.PLAYING) {
                                 Text(text = "Play")
                             }
                             else {
@@ -417,9 +350,7 @@ fun WriteMessage(
                             if(mediaPlayer.isPlaying) {
                                 stopPlayback(mediaPlayer)
                             }
-                            isRecorded = false
-                            isPlaying = false
-                            isPlayingPause = false
+                            recordStatus = RECORD_STATUS.IDLE
                             recordFileName = ""
                         }) {
                             Text(text = "Delete")
@@ -450,22 +381,20 @@ fun WriteMessage(
                     }
                 })
                 val lineCount = 3
+
                 LazyVerticalGrid(columns = GridCells.Fixed(3),
                     state = state.gridState,
                     modifier = Modifier
-                        .height(222.dp)
+                        .height(120.dp)
                         .reorderable(state)
                         .detectReorderAfterLongPress(state),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     content = {
-
                         imageUri.forEachIndexed { index, item ->
                             item(key = index) {
                                 val needStart = index % lineCount != 0
-                                val painter = rememberAsyncImagePainter(model = item)
-                                val itemState = rememberTransformItemState()
                                 Modifier
                                     .fillMaxWidth()
                                     .aspectRatio(1F)
@@ -478,34 +407,24 @@ fun WriteMessage(
                                         .padding(
                                             start = if (needStart) 2.dp else 0.dp,
                                             bottom = 2.dp
-                                        ),
+                                        )
+                                        .size(120.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    ScaleGrid(
-                                        detectGesture = DetectScaleGridGesture(
-                                            onPress = {
+                                    TransformImageView(
+                                        modifier = Modifier
+                                            .size(120.dp)
+                                            .clickable {
                                                 scope.launch {
-                                                    Log.i("LZWY", "onPress: $index: $item")
-                                                    if (settingState.transformEnter) {
-                                                        previewerState.openTransform(
-                                                            index = index,
-                                                            itemState = itemState,
-                                                        )
-                                                    } else {
-                                                        previewerState.open(index)
-                                                    }
-
+                                                    previewState.enterTransform(index)
                                                 }
-                                            }
-                                        )
-                                    ) {
-                                        TransformImageView(
-                                            painter = painter,
-                                            key = index,
-                                            itemState = itemState,
-                                            previewerState = previewerState,
-                                        )
-                                    }
+                                            },
+                                        imageLoader = {
+                                            val painter = rememberAsyncImagePainter(model = item)
+                                            Triple(item, painter, painter.intrinsicSize)
+                                        },
+                                        transformState = previewState,
+                                    )
                                     Box(
                                         modifier = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.BottomCenter
@@ -558,71 +477,28 @@ fun WriteMessage(
         }
 
         ImagePreviewer(
-            modifier = Modifier.fillMaxSize(),
-            state = previewerState,
-            imageLoader = { index ->
-                if (settingState.loaderError && (index % 2 == 0)) {
-                    null
-                } else {
-                    val image = imageUri[index]
-                    rememberCoilImagePainter(image = image)
-                }
-            },
-            previewerLayer = {
-                foreground = { index ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 60.dp, end = 16.dp),
-                        contentAlignment = Alignment.BottomEnd
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(
-                                    androidx.compose.material.MaterialTheme.colors.surface.copy(
-                                        0.2F
-                                    )
-                                )
-                                .clickable {
-                                    val tmp: MutableList<Uri> = imageUri.toMutableList()
-                                    tmp.removeAt(index)
-                                    imageUri = tmp.toList()
-                                }
-                                .padding(16.dp)
-                        ) {
-                            androidx.compose.material.Icon(
-                                modifier = Modifier.size(22.dp),
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = null,
-                                tint = androidx.compose.material.MaterialTheme.colors.surface
-                            )
-                        }
-                    }
-                }
+            state = previewState,
+            imageLoader = { page ->
+                val painter = rememberAsyncImagePainter(model = imageUri[page])
+                Pair(painter, painter.intrinsicSize)
             }
         )
 
-        if(!previewerState.visible) {
-            FloatingActionButton(
-                onClick = {
-                    Log.i(TAG, "Floating button clicked!")
-                    if(!previewerState.visible) {
-                        // double check
-                        finishWriting(title.text, content.text,
-                            imageUri, recordFileName)
-                    }
-                },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.BottomEnd)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = stringResource(id = R.string.edit),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+        FloatingActionButton(
+            onClick = {
+                Log.i(TAG, "Floating button clicked!")
+                finishWriting(title.text, content.text,
+                    imageUri, recordFileName ?: "")
+            },
+            modifier = Modifier
+                .padding(16.dp)
+                .align(Alignment.BottomEnd)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = stringResource(id = R.string.edit),
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }
@@ -636,66 +512,41 @@ fun stopPlayback(mediaPlayer: MediaPlayer) {
     }
 }
 
-@Composable
-fun rememberSettingState(): TransformSettingState {
-    return rememberSaveable(saver = TransformSettingState.Saver) {
-        TransformSettingState()
+private fun record(localContext: Context) {
+    Log.i("MediaRecorder", "recording start")
+    recordingTimer = object : CountDownTimer(Long.MAX_VALUE, 1000) {
+        override fun onTick(millisUntilFinished: Long) {
+            recordingDurationMillis += 1
+        }
+
+        override fun onFinish() {
+            recordingDurationMillis = 0
+        }
     }
-}
+    recordingTimer?.start()
+    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(
+        Date()
+    )
+    val recordingDir = localContext.getExternalFilesDir(
+        Environment.DIRECTORY_MUSIC + "/MyRecordings")
 
-val VERTICAL_DRAG_ENABLE = VerticalDragType.UpAndDown
-val VERTICAL_DRAG_DISABLE = VerticalDragType.None
-val DEFAULT_VERTICAL_DRAG = VERTICAL_DRAG_ENABLE
-const val DEFAULT_LOADER_ERROR = false
-const val DEFAULT_TRANSFORM_ENTER = true
-const val DEFAULT_TRANSFORM_EXIT = true
-const val DEFAULT_ANIMATION_DURATION = 400
-const val DEFAULT_DATA_REPEAT = 1
-class TransformSettingState {
-
-    var loaderError by mutableStateOf(DEFAULT_LOADER_ERROR)
-
-    var verticalDrag by mutableStateOf(DEFAULT_VERTICAL_DRAG)
-
-    var transformEnter by mutableStateOf(DEFAULT_TRANSFORM_ENTER)
-
-    var transformExit by mutableStateOf(DEFAULT_TRANSFORM_EXIT)
-
-    var animationDuration by mutableStateOf(DEFAULT_ANIMATION_DURATION)
-
-    var dataRepeat by mutableStateOf(DEFAULT_DATA_REPEAT)
-
-    fun reset() {
-        loaderError = DEFAULT_LOADER_ERROR
-        verticalDrag = DEFAULT_VERTICAL_DRAG
-        transformEnter = DEFAULT_TRANSFORM_ENTER
-        transformExit = DEFAULT_TRANSFORM_EXIT
-        animationDuration = DEFAULT_ANIMATION_DURATION
-        dataRepeat = DEFAULT_DATA_REPEAT
+    if (recordingDir != null && !recordingDir.exists()) {
+        recordingDir.mkdirs()
     }
-
-    companion object {
-        val Saver: Saver<TransformSettingState, *> = mapSaver(
-            save = {
-                mapOf<String, Any>(
-                    it::loaderError.name to it.loaderError,
-                    it::verticalDrag.name to it.verticalDrag,
-                    it::transformEnter.name to it.transformEnter,
-                    it::transformExit.name to it.transformExit,
-                    it::animationDuration.name to it.animationDuration,
-                    it::dataRepeat.name to it.dataRepeat,
-                )
-            },
-            restore = {
-                val state = TransformSettingState()
-                state.loaderError = it[state::loaderError.name] as Boolean
-                state.verticalDrag = it[state::verticalDrag.name] as VerticalDragType
-                state.transformEnter = it[state::transformEnter.name] as Boolean
-                state.transformExit = it[state::transformExit.name] as Boolean
-                state.animationDuration = it[state::animationDuration.name] as Int
-                state.dataRepeat = it[state::dataRepeat.name] as Int
-                state
-            }
-        )
+    val fileName = "${recordingDir?.absolutePath}/recording_$timeStamp.3gp"
+    Log.i("MediarRecorder", "save record at: $fileName")
+    recordFileName = fileName
+    mediaRecorder = MediaRecorder(localContext)
+    mediaRecorder?.apply {
+        setAudioSource(MediaRecorder.AudioSource.MIC)
+        setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+        setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+        setOutputFile(fileName)
+    }
+    try {
+        mediaRecorder?.prepare()
+        mediaRecorder?.start()
+    } catch (e: IOException) {
+        Log.e(TAG, e.toString())
     }
 }

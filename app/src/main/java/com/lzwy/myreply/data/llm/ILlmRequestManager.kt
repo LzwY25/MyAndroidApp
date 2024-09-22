@@ -19,10 +19,6 @@ interface ILlmRequestManager {
         imageUri: Uri,
     )
 
-    fun getHistoryList(): List<LlmMessage> {
-        return emptyList()
-    }
-
     fun requestSyncWithPrompt(listener: IListener?, model: String, prompt: String, messageList: List<Map<String, String>>)
 
     interface IListener {

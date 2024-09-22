@@ -1,8 +1,8 @@
 package com.lzwy.myreply.data.remote
 
-import com.lzwy.myreply.data.llm.ZhipuApiAssistantRequestData
-import com.lzwy.myreply.data.llm.ZhipuApiMediaRequestData
-import com.lzwy.myreply.data.llm.ZhipuApiRequestData
+import com.lzwy.myreply.data.llm.zhipu.ZhipuApiAssistantRequestData
+import com.lzwy.myreply.data.llm.zhipu.ZhipuApiMediaRequestData
+import com.lzwy.myreply.data.llm.zhipu.ZhipuApiRequestData
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
@@ -36,16 +36,6 @@ interface ZhipuApiService {
         @Header("Content-Type") contentType: String?,
         @Body data: ZhipuApiRequestData?
     ): Call<ResponseBody?>
-
-    @Streaming
-    @POST("chat/completions")
-    fun requestZhipuAiWithCoroutine(
-        @Header("Authorization") jwt: String?,
-        @Header("User-Agent") ua: String?,
-        @Header("Content-Type") contentType: String?,
-        @Body data: ZhipuApiRequestData?
-    ): Call<ResponseBody?>
-
 
     @Multipart
     @POST("files")

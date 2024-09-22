@@ -43,7 +43,7 @@ private val ChatBubbleShape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 20.dp)
 fun Conversation(conversationState: ConversationState,
                  llmLastReply: String,
                  setLlmModel: (String) -> Unit,
-                 chatWithLLM: (String, Model) -> Unit,
+                 chatWithLLM: (String) -> Unit,
                  onBackPressed: () -> Unit
 ) {
     var question by remember { mutableStateOf("") }
@@ -108,7 +108,7 @@ fun Conversation(conversationState: ConversationState,
                 modifier = Modifier.clickable {
                     keyboardController?.hide()
                     focusManager.clearFocus()
-                    chatWithLLM(question, Model.BearOne)
+                    chatWithLLM(question)
                     question = ""
                 })
         }

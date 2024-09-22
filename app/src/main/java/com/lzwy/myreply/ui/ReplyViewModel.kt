@@ -88,8 +88,8 @@ class ReplyViewModel(private val emailsRepository: MessageRepository = MessageRe
             )
     }
 
-    fun chatWithLLM(question: String = "你好", model: Model = Model.BearOne) {
-        Log.i(TAG, "chatWithLLM, question: $question, model: $model")
+    fun chatWithLLM(question: String = "你好") {
+        Log.i(TAG, "chatWithLLM, question: $question, model: ${_conversationState.value.model}")
         updateHistoryList(question, true)
         _llmLastReply.value = ""
         _conversationState.value =

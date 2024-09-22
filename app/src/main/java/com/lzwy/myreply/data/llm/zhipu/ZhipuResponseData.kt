@@ -1,4 +1,4 @@
-package com.lzwy.myreply.data.llm
+package com.lzwy.myreply.data.llm.zhipu
 
 import androidx.annotation.Keep
 import com.google.gson.annotations.SerializedName

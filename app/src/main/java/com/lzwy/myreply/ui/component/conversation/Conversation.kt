@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -103,14 +104,14 @@ fun Conversation(conversationState: ConversationState,
             Spacer(modifier = Modifier.width(16.dp))
 
             Icon(
-                painter = painterResource(id = R.drawable.add_more),
+                painter = painterResource(id = R.drawable.fasong),
                 contentDescription = "Send Button",
                 modifier = Modifier.clickable {
                     keyboardController?.hide()
                     focusManager.clearFocus()
                     chatWithLLM(question)
                     question = ""
-                })
+                }.size(24.dp))
         }
     }
 }

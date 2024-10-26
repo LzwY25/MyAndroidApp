@@ -47,7 +47,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ContrastAwareReplyTheme {
+            ContrastAwareReplyTheme(
+                dynamicColor = true
+            ) {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
                 val conversationState by viewModel.conversationState.collectAsStateWithLifecycle()

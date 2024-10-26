@@ -286,7 +286,7 @@ fun ContrastAwareReplyTheme(
     content: @Composable() () -> Unit
 ) {
     val replyColorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }

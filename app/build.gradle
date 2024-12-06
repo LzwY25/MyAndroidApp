@@ -65,6 +65,7 @@ dependencies {
     implementation ("id.zelory:compressor:3.0.1")
     implementation ("org.burnoutcrew.composereorderable:reorderable:0.9.6")
     implementation("com.jvziyaoyao.scale:image-viewer:1.1.0-alpha.2")
+    implementation 'com.tencent:mmkv:2.0.0'
     //jwt
     implementation libs.java.jwt
     implementation libs.androidx.navigation.compose

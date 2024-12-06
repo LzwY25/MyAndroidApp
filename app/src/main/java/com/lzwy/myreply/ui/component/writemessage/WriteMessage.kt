@@ -89,9 +89,9 @@ enum class RecordStatus {
     PLAY_PAUSED
 }
 
-var recordingTimer: CountDownTimer? = null
-var mediaRecorder: MediaRecorder? = null
-var recordFileName: String? = null
+private var recordingTimer: CountDownTimer? = null
+private var mediaRecorder: MediaRecorder? = null
+private var recordFileName: String? = null
 
 @Composable
 fun WriteMessage(

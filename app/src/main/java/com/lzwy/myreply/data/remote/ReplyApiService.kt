@@ -1,6 +1,6 @@
 package com.lzwy.myreply.data.remote
 
-import com.lzwy.myreply.data.Account
+import com.lzwy.myreply.data.account.Account
 import com.lzwy.myreply.data.Message
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody

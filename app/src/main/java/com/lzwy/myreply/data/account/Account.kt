@@ -1,4 +1,4 @@
-package com.lzwy.myreply.data
+package com.lzwy.myreply.data.account
 
 data class Account(
     val id: Long,

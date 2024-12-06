@@ -1,5 +1,7 @@
 package com.lzwy.myreply.data
 
+import com.lzwy.myreply.data.account.Account
+
 data class TextMessage(
     val title: String,
     val content: String,

@@ -4,17 +4,13 @@ import android.util.Log
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.google.gson.Gson
-import com.lzwy.myreply.data.llm.ILlmRequestManager
 import com.lzwy.myreply.data.llm.LlmRequestManagerImpl
-import com.lzwy.myreply.data.llm.LlmRequestManagerImpl.Companion
 import com.lzwy.myreply.data.llm.LlmResponseData
 import com.lzwy.myreply.data.remote.RetrofitManager
 import okhttp3.ResponseBody
 import retrofit2.Call
-import retrofit2.Callback
 import retrofit2.Response
 import java.io.BufferedReader
-import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 
@@ -215,12 +211,5 @@ object ZhipuQARequestManager {
         Log.d(TAG, "onFailure: msg = " + t.message)
     }
 
-
-    interface ZhipuAiCallBack {
-        @Throws(IOException::class)
-        fun onSuccess(response: ResponseBody?)
-
-        fun onFail(errorMessage: String?)
-    }
 
 }

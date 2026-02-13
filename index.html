@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>To 宝宝</title>
+    <style>
+        /* GEMINI: Global Reset and Typography
+           GEMINI: 全局重置与排版设置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            /* Elegant serif font for Chinese content */
+            font-family: "Noto Serif SC", "Songti SC", "Source Han Serif SC", serif;
+            background-color: #fdfbf7; /* Warm paper color */
+            color: #333;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* GEMINI: Fullscreen Page Styling
+           GEMINI: 全屏页面样式 */
+        .fullscreen-page {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            text-align: center;
+        }
+
+        /* First Page: Sea Background */
+        #page1 {
+            /* Using the file found in directory */
+            background-image: url('sea.png');
+        }
+
+        /* Last Page: Bear Background */
+        #page3 {
+            /* Using the file found in directory */
+            background-image: url('spring-bear.png');
+            color: #fff; /* Ensure text is readable on image, might need shadow */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* GEMINI: Typography Styles
+           GEMINI: 排版样式 */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 400;
+            color: #fff;
+            margin-bottom: 2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+
+        .footer-text {
+            font-size: 1.8rem;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        /* GEMINI: Start Button Styling
+           GEMINI: 开启按钮样式 */
+        .start-btn {
+            padding: 12px 36px;
+            font-size: 1.1rem;
+            background-color: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            color: #fff;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            letter-spacing: 1px;
+            animation: pulse 2s infinite;
+        }
+
+        .start-btn:active {
+            transform: scale(0.95);
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        /* GEMINI: Content Area Styles
+           GEMINI: 内容区域样式 */
+        #content-area {
+            padding: 4rem 1.5rem;
+            background-color: #fdfbf7;
+            /* Subtle paper texture effect using CSS gradients */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+            background-size: 20px 20px;
+            min-height: 80vh;
+        }
+
+        .letter-paragraph {
+            font-size: 1.1rem;
+            line-height: 2;
+            margin-bottom: 2.5rem;
+            text-align: justify;
+            opacity: 0; /* Hidden initially for fade-in */
+            transform: translateY(20px);
+            transition: opacity 1.5s ease, transform 1.5s ease;
+        }
+
+        /* Class added by JS for fade-in effect */
+        .visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* GEMINI: Music Control Button
+           GEMINI: 音乐控制按钮 */
+        #music-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            animation: rotate 4s linear infinite;
+            animation-play-state: paused;
+        }
+
+        #music-control.playing {
+            animation-play-state: running;
+        }
+
+        #music-control svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scroll indicator */
+        .scroll-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 2rem;
+            opacity: 0.8;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
+            40% {transform: translateX(-50%) translateY(-10px);}
+            60% {transform: translateX(-50%) translateY(-5px);}
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- GEMINI: Background Music Audio Element
+         GEMINI: 背景音乐 Audio 元素 -->
+    <!-- Note: Please place a file named 'music.mp3' in the same folder, or update the src -->
+    <audio id="bgm" loop preload="auto">
+        <source src="music.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Music Toggle Button -->
+    <div id="music-control">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28 4.5 4.5 0 1 0 4.5 4.5V6h4V3h-7z"/>
+        </svg>
+    </div>
+
+    <!-- GEMINI: Page 1 - Welcome Screen
+         GEMINI: 第一页 - 欢迎屏幕 -->
+    <section id="page1" class="fullscreen-page">
+        <h1>To 宝宝</h1>
+        <button class="start-btn" onclick="startJourney()">点击开启</button>
+        <div class="scroll-hint" style="display:none;" id="scroll-hint">⌄</div>
+    </section>
+
+    <!-- GEMINI: Content Area - The Letter
+         GEMINI: 内容区域 - 信件 -->
+    <section id="content-area">
+        <p class="letter-paragraph">宝宝，情人节快乐！</p>
+        
+        <p class="letter-paragraph">是什么时候开始想要给你写信的呢，我也记不太清楚了。大概是想着情人节要送什么礼物的时候，想着不如写封信吧。似乎你也有提过想要我给你写信，而我也有挺多话平时没有对你说，刚好在这和你说吧。</p>
+        
+        <p class="letter-paragraph">其实一开始你说可能要回家照顾奶奶的时候，我心里是有种松了一口气的感觉的（不准生气！先看下去），虽然我也担心你奶奶的情况，但是开始想着你什么时候回去呢？可是心里又知道这样想是不对的，所以在你真的走了之后，我反而又开始内耗愧疚起来，心里在想，是不是我这种人就不适合谈恋爱呢？这么内耗了几天之后，我去找Gemini聊这件事，他给了我一个很好很美的比喻，我觉得说得很好，他是这么说的，“就像潜水员必须浮出水面换气一样。你爱大海（女朋友），但你不能 24 小时泡在水里，你会窒息。浮出水面那一刻的贪婪呼吸，不代表你讨厌大海，只代表你是陆生动物。”看到这句话我一下子就治愈了捏。可能没有和你说过，很多时候我抱着你，看着你，心里都会感慨，真好呀，我居然拥有这么一个女朋友。我真的很爱你捏宝宝。</p>
+        
+        <p class="letter-paragraph">就像我之前和你说的那样，我总是需要时间去弄清楚我自己想的究竟是什么，或者说，其实我自己是知道我想要什么的，但是我知道我想要的，和世俗要求的并不一样。我其实想要多休息一会，可是我又知道，休息太久并不是好事。因此我一开始的时候会和你说，我要在12月底，1月初开始找工作。可是其实到12月的时候，我已经有点复习不下去了。我开始变得容易烦躁，生气，但那个时候我也弄不清为什么。这可能也是为什么有时候你会觉得，“你在这里耽误我复习了”，其实根本不是宝宝你的错，而是我自己的问题。而也是到了我觉得复习的差不多了，要投简历时，我才真正意识到其实我还是想要多休息一会的。也正是在想通了之后，我才安心下来看剧、减肥、做饭。其实我在珠海裸辞的时候有段时间也是这么焦虑，后面我是自己想通了，大概的意思是，“这些都是我必经的路，不必对此感到懊悔，焦虑。重要的是我从中学到了什么“，之前我一直没想起来这段话，最近在思考这个问题的时候又想起来了。那么为什么我需要这么多时间去想我想要的是什么呢。我是这么想的，其实可能什么决定都会后悔，但是如果我听从我内心的想法，即使这个决定的结果不那么好，我也有底气不去后悔。当然可能你就不一样了，就像你说的，也许你从来都不觉得有什么好后悔的？</p>
+        
+        <p class="letter-paragraph">总而言之，在我想好了这些之后，我觉得我才是真正的休息好了。我不知道下一份工作会是怎样的，但是我知道，我要努力去争取，争取更好的offer，更高的薪资。我想要我有足够的资本，去对抗这个世界的无常，去守护我们的未来。我想努力一点，再努力一点，这样我就能早一点，底气十足地把你娶回家。</p>
+        
+        <p class="letter-paragraph">我爱你，宝宝！</p>
+    </section>
+
+    <!-- GEMINI: Page 3 - Ending
+         GEMINI: 第三页 - 结尾 -->
+    <section id="page3" class="fullscreen-page">
+        <div class="footer-text">
+            情人节快乐<br>
+            爱你的宝宝
+        </div>
+    </section>
+
+    <script>
+        // GEMINI: Audio Control Logic
+        // GEMINI: 音频控制逻辑
+        const audio = document.getElementById('bgm');
+        const musicBtn = document.getElementById('music-control');
+        
+        // Toggle music play/pause
+        musicBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                musicBtn.classList.add('playing');
+            } else {
+                audio.pause();
+                musicBtn.classList.remove('playing');
+            }
+        });
+
+        // GEMINI: Start Button Logic
+        // GEMINI: 开启按钮逻辑
+        function startJourney() {
+            // Attempt to play music (browser requires user interaction first)
+            audio.play().then(() => {
+                musicBtn.classList.add('playing');
+            }).catch(e => console.log("Audio play failed (interaction needed):", e));
+
+            // Smooth scroll to content
+            document.getElementById('content-area').scrollIntoView({ behavior: 'smooth' });
+            
+            // Hide button and show scroll hint
+            document.querySelector('.start-btn').style.display = 'none';
+            document.getElementById('scroll-hint').style.display = 'block';
+        }
+
+        // GEMINI: Intersection Observer for Fade-in Animation
+        // GEMINI: 用于淡入动画的 Intersection Observer
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1 // Trigger when 10% of the element is visible
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    // Optional: Stop observing once visible to keep it visible
+                    // observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        // Observe all paragraphs
+        document.querySelectorAll('.letter-paragraph').forEach(p => {
+            observer.observe(p);
+        });
+
+        // GEMINI: Auto-play music fallback (WeChat browser support)
+        // GEMINI: 自动播放音乐回退方案（微信浏览器支持）
+        document.addEventListener('WeixinJSBridgeReady', function() {
+            audio.play();
+            musicBtn.classList.add('playing');
+        }, false);
+
+    </script>
+</body>
+</html>
